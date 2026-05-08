@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Who's to Blame? — AI Arbitration</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Crimson+Pro:wght@300;400;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --gold: #C9A84C;
+    --gold-dim: rgba(201,168,76,0.3);
+    --gold-glow: rgba(201,168,76,0.12);
+    --bg: #0d1117;
+    --bg2: #131b2e;
+    --text: #e8e0d0;
+    --text-dim: rgba(232,224,208,0.5);
+    --text-faint: rgba(232,224,208,0.28);
+    --red: #e05c5c;
+    --blue: #4a9eda;
+    --green: #5cb87a;
+    --orange: #d4894a;
+    --card-bg: rgba(255,255,255,0.04);
+    --card-border: rgba(201,168,76,0.18);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    min-height: 100vh;
+    background: radial-gradient(ellipse at 30% 20%, #131b2e 0%, #0d1117 60%);
+    font-family: 'Crimson Pro', Georgia, serif;
+    color: var(--text);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 40px 16px 60px;
+  }
+
+  /* Subtle grain overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.6;
+  }
+
+  .app {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 500px;
+  }
+
+  /* ── SCREENS ── */
+  .screen { display: none; animation: fadeUp 0.45s ease both; }
+  .screen.active { display: block; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(22px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── HEADER BRAND ── */
+  .brand {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+  .brand-icon { font-size: 54px; display: block; margin-bottom: 10px; }
+  .brand h1 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 40px;
+    font-weight: 400;
+    color: var(--gold);
+    letter-spacing: 1px;
+    line-height: 1;
+  }
+  .brand-sub {
+    font-size: 11px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin-top: 8px;
+  }
+  .brand-desc {
+    font-size: 16px;
+    line-height: 1.75;
+    color: rgba(232,224,208,0.65);
+    margin-top: 20px;
+    font-style: italic;
+  }
+
+  /* ── CARD ── */
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 18px;
+    padding: 28px 24px;
+    margin-bottom: 14px;
+  }
+  .card-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    color: var(--gold);
+    font-weight: 400;
+    margin-bottom: 4px;
+  }
+  .card-sub { font-size: 13px; color: var(--text-dim); margin-bottom: 22px; }
+
+  hr.divider {
+    border: none;
+    border-top: 1px solid var(--gold-dim);
+    margin: 20px 0;
+  }
+
+  /* ── LABELS ── */
+  .field-label {
+    display: block;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 7px;
+  }
+
+  /* ── INPUTS ── */
+  input[type="text"], textarea {
+    width: 100%;
+    background: rgba(255,255,255,0.04);
+    border: 1.5px solid var(--gold-dim);
+    border-radius: 10px;
+    padding: 12px 16px;
+    color: var(--text);
+    font-size: 15px;
+    font-family: 'Crimson Pro', Georgia, serif;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    resize: vertical;
+  }
+  input[type="text"]:focus, textarea:focus {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px rgba(201,168,76,0.1);
+  }
+  input::placeholder, textarea::placeholder { color: rgba(232,224,208,0.28); }
+
+  .field-group { margin-bottom: 18px; }
+
+  /* ── RELATIONSHIP PILLS ── */
+  .pills { display: flex; flex-wrap: wrap; gap: 8px; }
+  .pill {
+    background: rgba(255,255,255,0.04);
+    border: 1.5px solid rgba(201,168,76,0.22);
+    border-radius: 20px;
+    padding: 7px 18px;
+    font-family: 'Crimson Pro', serif;
+    font-size: 14px;
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.18s;
+    user-select: none;
+  }
+  .pill:hover { background: rgba(201,168,76,0.1); border-color: var(--gold); }
+  .pill.active { background: rgba(201,168,76,0.15); border-color: var(--gold); color: var(--gold); }
+
+  /* ── TEXTAREA WRAPPER (for + button) ── */
+  .textarea-wrap { position: relative; }
+  .textarea-wrap textarea { padding-right: 46px; }
+
+  .plus-btn {
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #b8922a, var(--gold));
+    border: none;
+    color: #0d1117;
+    font-size: 20px;
+    font-weight: bold;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.22s;
+    box-shadow: 0 2px 8px rgba(201,168,76,0.35);
+  }
+  .plus-btn.open { transform: rotate(45deg); }
+
+  /* ── SYNC MENU ── */
+  .sync-menu {
+    display: none;
+    background: #131b2e;
+    border: 1px solid rgba(201,168,76,0.28);
+    border-radius: 12px;
+    margin-top: 6px;
+    overflow: hidden;
+    animation: fadeUp 0.18s ease both;
+  }
+  .sync-menu.open { display: block; }
+  .sync-opt {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 16px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.15s;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .sync-opt:last-child { border-bottom: none; }
+  .sync-opt:hover { background: rgba(201,168,76,0.09); }
+  .sync-opt .sync-icon { font-size: 20px; }
+
+  .active-sync {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    background: rgba(201,168,76,0.09);
+    border: 1px solid rgba(201,168,76,0.28);
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin-bottom: 10px;
+    font-size: 13px;
+    color: var(--gold);
+  }
+  .active-sync.visible { display: flex; }
+  .active-sync .remove-sync {
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    padding: 0;
+  }
+  .sync-hint { font-size: 12px; color: var(--text-faint); margin-top: 8px; }
+  .sync-hint strong { color: var(--gold); }
+
+  /* ── BUTTONS ── */
+  .btn {
+    display: block;
+    width: 100%;
+    padding: 14px;
+    border-radius: 10px;
+    border: none;
+    font-family: 'Crimson Pro', Georgia, serif;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 10px;
+  }
+  .btn-gold {
+    background: linear-gradient(135deg, #b8922a, var(--gold), #b8922a);
+    color: #0d1117;
+  }
+  .btn-gold:hover { filter: brightness(1.12); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(201,168,76,0.3); }
+  .btn-outline {
+    background: transparent;
+    color: var(--gold);
+    border: 1.5px solid var(--gold-dim);
+  }
+  .btn-outline:hover { background: rgba(201,168,76,0.08); border-color: var(--gold); }
+
+  /* ── ERROR ── */
+  .error-msg { color: var(--red); font-size: 13px; margin-bottom: 12px; display: none; }
+  .error-msg.visible { display: block; }
+
+  /* ── ANALYZING ── */
+  #screen-analyzing {
+    text-align: center;
+    padding: 60px 20px;
+  }
+  .arbiter-icon {
+    font-size: 64px;
+    display: block;
+    margin-bottom: 20px;
+    animation: glow 2.2s ease-in-out infinite;
+  }
+  @keyframes glow {
+    0%,100% { filter: drop-shadow(0 0 12px rgba(201,168,76,0.3)); }
+    50% { filter: drop-shadow(0 0 28px rgba(201,168,76,0.7)); }
+  }
+  .analyzing-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 24px;
+    font-weight: 400;
+    color: var(--gold);
+    margin-bottom: 10px;
+  }
+  .analyzing-sub { font-size: 15px; color: var(--text-dim); line-height: 1.7; }
+  .dots {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 28px;
+  }
+  .dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--gold);
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+  .dot:nth-child(2) { animation-delay: 0.22s; }
+  .dot:nth-child(3) { animation-delay: 0.44s; }
+  @keyframes pulse {
+    0%,100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.35; transform: scale(1.4); }
+  }
+
+  /* ── VERDICT ── */
+  .verdict-header { text-align: center; margin-bottom: 22px; }
+  .verdict-eyebrow {
+    font-size: 11px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin-bottom: 6px;
+  }
+  .verdict-ruling {
+    font-family: 'Playfair Display', serif;
+    font-size: 27px;
+    font-weight: 400;
+    line-height: 1.2;
+  }
+
+  .bar-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    margin-bottom: 5px;
+  }
+  .bar-track {
+    height: 10px;
+    border-radius: 5px;
+    background: rgba(255,255,255,0.07);
+    overflow: hidden;
+    margin-bottom: 14px;
+  }
+  .bar-fill {
+    height: 100%;
+    border-radius: 5px;
+    width: 0;
+    transition: width 1.1s cubic-bezier(0.4,0,0.2,1);
+  }
+  .bar-you { background: linear-gradient(90deg, #c0392b, var(--red)); }
+  .bar-them { background: linear-gradient(90deg, #2980b9, var(--blue)); }
+  .bar-pct-you { color: var(--red); font-weight: 600; }
+  .bar-pct-them { color: var(--blue); font-weight: 600; }
+
+  .sides-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .side-card {
+    border-radius: 12px;
+    padding: 16px;
+    font-size: 13px;
+    line-height: 1.65;
+    color: rgba(232,224,208,0.72);
+  }
+  .side-card-you { background: rgba(224,92,92,0.07); border: 1px solid rgba(224,92,92,0.22); }
+  .side-card-them { background: rgba(74,158,218,0.07); border: 1px solid rgba(74,158,218,0.22); }
+  .side-name {
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+  .side-name-you { color: var(--red); }
+  .side-name-them { color: var(--blue); }
+
+  .finding-card {
+    background: rgba(201,168,76,0.07);
+    border: 1px solid rgba(201,168,76,0.28);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 14px;
+  }
+  .finding-label {
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 10px;
+  }
+  .finding-text {
+    font-size: 15px;
+    line-height: 1.75;
+    color: var(--text);
+    font-style: italic;
+  }
+
+  .advice-card {
+    background: rgba(92,184,122,0.06);
+    border: 1px solid rgba(92,184,122,0.2);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 22px;
+  }
+  .advice-label {
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--green);
+    margin-bottom: 8px;
+  }
+  .advice-text { font-size: 14px; line-height: 1.65; color: rgba(232,224,208,0.72); }
+
+  .footer-note { font-size: 11px; color: var(--text-faint); text-align: center; margin-top: 8px; }
+
+  /* Mobile tweaks */
+  @media (max-width: 420px) {
+    .sides-grid { grid-template-columns: 1fr; }
+    body { padding: 24px 12px 50px; }
+    .brand h1 { font-size: 34px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HOME -->
+  <div id="screen-home" class="screen active">
+    <div class="brand">
+      <span class="brand-icon">⚖️</span>
+      <h1>Who's to Blame?</h1>
+      <p class="brand-sub">Independent AI Arbitration</p>
+      <p class="brand-desc">Submit your argument. The Arbiter listens to both sides, weighs the evidence, and delivers an honest, empathetic ruling.</p>
+    </div>
+    <button class="btn btn-gold" onclick="showScreen('setup')">Begin Case</button>
+    <p class="footer-note">All cases are treated with strict confidentiality</p>
+  </div>
+
+  <!-- SETUP -->
+  <div id="screen-setup" class="screen">
+    <div class="card">
+      <p class="card-title">Case Setup</p>
+      <p class="card-sub">Tell the Arbiter who's involved</p>
+
+      <div class="field-group">
+        <label class="field-label" for="your-name">Your Name</label>
+        <input type="text" id="your-name" placeholder="Your name" />
+      </div>
+      <div class="field-group">
+        <label class="field-label" for="their-name">Their Name</label>
+        <input type="text" id="their-name" placeholder="Other party's name" />
+      </div>
+      <div class="field-group">
+        <label class="field-label">Relationship</label>
+        <div class="pills">
+          <div class="pill" onclick="selectRelationship(this)">Couple</div>
+          <div class="pill" onclick="selectRelationship(this)">Friends</div>
+          <div class="pill" onclick="selectRelationship(this)">Family</div>
+          <div class="pill" onclick="selectRelationship(this)">Coworkers</div>
+          <div class="pill" onclick="selectRelationship(this)">Other</div>
+        </div>
+      </div>
+
+      <p id="setup-error" class="error-msg">Please fill in all fields and select a relationship.</p>
+      <button class="btn btn-gold" onclick="proceedToInput()">Continue →</button>
+      <button class="btn btn-outline" onclick="showScreen('home')">Back</button>
+    </div>
+  </div>
+
+  <!-- INPUT -->
+  <div id="screen-input" class="screen">
+    <div class="card">
+      <p class="card-title">Present Your Case</p>
+      <p class="card-sub" id="case-subtitle">— vs — · —</p>
+
+      <div id="active-sync" class="active-sync">
+        <span id="active-sync-icon"></span>
+        <span id="active-sync-label"></span>
+        <button class="remove-sync" onclick="clearSync()">×</button>
+      </div>
+
+      <div class="textarea-wrap">
+        <textarea id="argument-text" rows="8" placeholder="Describe what happened, paste a conversation, or add context about the argument..."></textarea>
+        <button class="plus-btn" id="plus-btn" onclick="toggleSyncMenu()" title="Add input source">+</button>
+      </div>
+
+      <div class="sync-menu" id="sync-menu">
+        <div class="sync-opt" onclick="selectSync('💬','Messenger / Chat','Paste your chat transcript here...')">
+          <span class="sync-icon">💬</span> Messenger / Chat
+        </div>
+        <div class="sync-opt" onclick="selectSync('📧','Email Thread','Paste the email thread here...')">
+          <span class="sync-icon">📧</span> Email Thread
+        </div>
+        <div class="sync-opt" onclick="selectSync('🎙️','Voice / Audio Transcript','Paste voice transcript or describe what was said...')">
+          <span class="sync-icon">🎙️</span> Voice / Audio Transcript
+        </div>
+        <div class="sync-opt" onclick="selectSync('✍️','Describe the Argument','Tell us what happened in your own words...')">
+          <span class="sync-icon">✍️</span> Describe the Argument
+        </div>
+      </div>
+
+      <p class="sync-hint">Tap <strong>+</strong> to choose input type: messenger, email, voice, or direct description</p>
+
+      <p id="input-error" class="error-msg" style="margin-top:10px">Please provide the argument details.</p>
+      <div style="margin-top:14px">
+        <button class="btn btn-gold" onclick="submitCase()">Submit to The Arbiter</button>
+        <button class="btn btn-outline" onclick="showScreen('setup')">Back</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ANALYZING -->
+  <div id="screen-analyzing" class="screen">
+    <span class="arbiter-icon">⚖️</span>
+    <h2 class="analyzing-title">The Arbiter is deliberating…</h2>
+    <p class="analyzing-sub">Weighing both sides with care.<br>A fair ruling takes a moment.</p>
+    <div class="dots">
+      <div class="dot"></div>
+      <div class="dot"></div>
+      <div class="dot"></div>
+    </div>
+  </div>
+
+  <!-- VERDICT -->
+  <div id="screen-verdict" class="screen">
+    <div class="verdict-header">
+      <p class="verdict-eyebrow">⚖️ &nbsp; The Arbiter Rules</p>
+      <p class="verdict-ruling" id="verdict-ruling">—</p>
+    </div>
+
+    <div class="card">
+      <div class="bar-label">
+        <span id="bar-label-you">You</span>
+        <span class="bar-pct-you" id="bar-pct-you">0%</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill bar-you" id="bar-you"></div></div>
+
+      <div class="bar-label">
+        <span id="bar-label-them">Them</span>
+        <span class="bar-pct-them" id="bar-pct-them">0%</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill bar-them" id="bar-them"></div></div>
+    </div>
+
+    <div class="card">
+      <p id="verdict-summary" style="font-size:15px;line-height:1.75;color:rgba(232,224,208,0.85)"></p>
+    </div>
+
+    <div class="sides-grid">
+      <div class="side-card side-card-you">
+        <p class="side-name side-name-you" id="side-name-you">YOUR SIDE</p>
+        <p id="verdict-your-side"></p>
+      </div>
+      <div class="side-card side-card-them">
+        <p class="side-name side-name-them" id="side-name-them">THEIR SIDE</p>
+        <p id="verdict-their-side"></p>
+      </div>
+    </div>
+
+    <div class="finding-card">
+      <p class="finding-label">⚖️ &nbsp; Key Finding</p>
+      <p class="finding-text" id="verdict-finding"></p>
+    </div>
+
+    <div class="advice-card">
+      <p class="advice-label">💡 &nbsp; Moving Forward</p>
+      <p class="advice-text" id="verdict-advice"></p>
+    </div>
+
+    <button class="btn btn-gold" onclick="newCase()">New Case</button>
+    <p class="footer-note">The Arbiter's ruling is advisory. Healthy communication always wins.</p>
+  </div>
+
+</div>
+
+<script>
+  // ── State ──
+  let state = {
+    yourName: '', theirName: '', relationship: '',
+    syncType: null, syncIcon: null
+  };
+
+  // ── Screen nav ──
+  function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    const el = document.getElementById('screen-' + id);
+    el.classList.add('active');
+    // Re-trigger animation
+    el.style.animation = 'none';
+    el.offsetHeight;
+    el.style.animation = '';
+  }
+
+  // ── Relationship pills ──
+  function selectRelationship(el) {
+    document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    state.relationship = el.textContent;
+  }
+
+  // ── Setup → Input ──
+  function proceedToInput() {
+    const yourName = document.getElementById('your-name').value.trim();
+    const theirName = document.getElementById('their-name').value.trim();
+    const err = document.getElementById('setup-error');
+    if (!yourName || !theirName || !state.relationship) {
+      err.classList.add('visible'); return;
+    }
+    err.classList.remove('visible');
+    state.yourName = yourName;
+    state.theirName = theirName;
+    document.getElementById('case-subtitle').textContent =
+      `${yourName} vs ${theirName} · ${state.relationship}`;
+    showScreen('input');
+  }
+
+  // ── Sync menu ──
+  function toggleSyncMenu() {
+    const menu = document.getElementById('sync-menu');
+    const btn = document.getElementById('plus-btn');
+    menu.classList.toggle('open');
+    btn.classList.toggle('open');
+  }
+
+  function selectSync(icon, label, placeholder) {
+    state.syncType = label;
+    state.syncIcon = icon;
+    document.getElementById('active-sync').classList.add('visible');
+    document.getElementById('active-sync-icon').textContent = icon + ' ';
+    document.getElementById('active-sync-label').textContent = label;
+    document.getElementById('argument-text').placeholder = placeholder;
+    document.getElementById('sync-menu').classList.remove('open');
+    document.getElementById('plus-btn').classList.remove('open');
+    document.getElementById('argument-text').focus();
+  }
+
+  function clearSync() {
+    state.syncType = null; state.syncIcon = null;
+    document.getElementById('active-sync').classList.remove('visible');
+    document.getElementById('argument-text').placeholder =
+      'Describe what happened, paste a conversation, or add context about the argument...';
+  }
+
+  // ── Submit ──
+  async function submitCase() {
+    const content = document.getElementById('argument-text').value.trim();
+    const err = document.getElementById('input-error');
+    if (!content) { err.classList.add('visible'); return; }
+    err.classList.remove('visible');
+    showScreen('analyzing');
+
+    const prompt = `You are a wise, empathetic, and fair arbitrator called "The Arbiter." Your job is to analyze arguments between people and deliver a fair ruling.
+
+Here is the argument to analyze:
+- Submitted by: ${state.yourName}
+- Other party: ${state.theirName}
+- Relationship type: ${state.relationship}
+- Input type: ${state.syncType || 'Direct input'}
+- Argument details:
+${content}
+
+Your task:
+1. Carefully analyze the situation from BOTH perspectives
+2. Identify the key issues, emotions, and behaviors
+3. Deliver a clear, empathetic ruling
+
+Respond in this EXACT JSON format (no markdown, no extra text, no backticks):
+{"ruling":"you|them|both|neither","percentage_you":50,"percentage_them":50,"summary":"2-3 sentence empathetic summary","your_side":"1-2 sentences for their valid points","their_side":"1-2 sentences for other party valid points","key_finding":"single most important finding","advice":"1 sentence of constructive advice"}`;
+
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+      const data = await res.json();
+      const text = (data.content || []).map(b => b.text || '').join('');
+      const clean = text.replace(/```json|```/g, '').trim();
+      const v = JSON.parse(clean);
+      renderVerdict(v);
+    } catch(e) {
+      document.getElementById('input-error').textContent = 'Something went wrong. Please try again.';
+      document.getElementById('input-error').classList.add('visible');
+      showScreen('input');
+    }
+  }
+
+  // ── Render verdict ──
+  function renderVerdict(v) {
+    const rulingColors = { you: '#e05c5c', them: '#4a9eda', both: '#d4894a', neither: '#5cb87a' };
+    const rulingLabels = {
+      you: `${state.yourName} is to blame`,
+      them: `${state.theirName} is to blame`,
+      both: 'Both parties share blame',
+      neither: 'Neither party is to blame'
+    };
+
+    document.getElementById('verdict-ruling').textContent = rulingLabels[v.ruling] || 'Ruling unclear';
+    document.getElementById('verdict-ruling').style.color = rulingColors[v.ruling] || '#C9A84C';
+
+    document.getElementById('bar-label-you').textContent = state.yourName;
+    document.getElementById('bar-label-them').textContent = state.theirName;
+    document.getElementById('bar-pct-you').textContent = v.percentage_you + '%';
+    document.getElementById('bar-pct-them').textContent = v.percentage_them + '%';
+
+    document.getElementById('side-name-you').textContent = state.yourName.toUpperCase() + "'S SIDE";
+    document.getElementById('side-name-them').textContent = state.theirName.toUpperCase() + "'S SIDE";
+
+    document.getElementById('verdict-summary').textContent = v.summary;
+    document.getElementById('verdict-your-side').textContent = v.your_side;
+    document.getElementById('verdict-their-side').textContent = v.their_side;
+    document.getElementById('verdict-finding').textContent = v.key_finding;
+    document.getElementById('verdict-advice').textContent = v.advice;
+
+    showScreen('verdict');
+
+    // Animate bars after render
+    setTimeout(() => {
+      document.getElementById('bar-you').style.width = v.percentage_you + '%';
+      document.getElementById('bar-them').style.width = v.percentage_them + '%';
+    }, 120);
+  }
+
+  // ── New case ──
+  function newCase() {
+    document.getElementById('your-name').value = '';
+    document.getElementById('their-name').value = '';
+    document.getElementById('argument-text').value = '';
+    document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+    clearSync();
+    state = { yourName:'', theirName:'', relationship:'', syncType:null, syncIcon:null };
+    showScreen('home');
+  }
+</script>
+</body>
+</html>
